@@ -65,6 +65,8 @@ export const ServerProviderAuth = Schema.Struct({
   type: Schema.optional(TrimmedNonEmptyString),
   label: Schema.optional(TrimmedNonEmptyString),
   email: Schema.optional(TrimmedNonEmptyString),
+  /** One email can sign in to several organizations, each its own account. */
+  organization: Schema.optional(TrimmedNonEmptyString),
   action: Schema.optional(AcpRegistryUrlAuthAction),
   canLogout: Schema.optional(Schema.Boolean),
   subscriptionSharing: Schema.optional(Schema.Boolean),

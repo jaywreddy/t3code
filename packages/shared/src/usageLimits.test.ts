@@ -204,6 +204,45 @@ describe("pools", () => {
     expect(accounts[0]?.limits.windows[0]?.usedPercent).toBe(55);
   });
 
+  it("keeps one email in two organizations apart, and joins unscoped reads only when unambiguous", () => {
+    const login = (instanceId: string, organization?: string) =>
+      provider({
+        driver: claude,
+        instanceId: ProviderInstanceId.make(instanceId),
+        auth: { status: "authenticated", email: "same@example.com", organization },
+        usageLimits: { checkedAt, windows: [window] },
+      });
+    const hubAccount = {
+      id: "claude-same@example.com.json",
+      driver: claude,
+      email: "same@example.com",
+      usageLimits: { checkedAt, windows: [window] },
+    };
+    const keysFor = (providers: ReadonlyArray<ServerProvider>) =>
+      collectLimitAccounts(
+        new Map([
+          [
+            EnvironmentId.make("env-a"),
+            {
+              ...laptop,
+              serverConfig: {
+                providers,
+                usageLimitSources: [{ ...source, accounts: [hubAccount] }],
+              },
+            },
+          ],
+        ]),
+      ).map((account) => account.key);
+
+    expect(keysFor([login("personal", "Personal"), login("team", "Acme")])).toEqual([
+      "env-a:personal",
+      "env-a:team",
+      "hub:claude-same@example.com.json",
+    ]);
+    // A server that predates organizations, like the hub, joins the only one.
+    expect(keysFor([login("team", "Acme"), login("older")])).toEqual(["env-a:team"]);
+  });
+
   it("merges OpenCode Go limits from machines with the same API key", () => {
     const go = provider({
       driver: ProviderDriverKind.make("opencode"),
